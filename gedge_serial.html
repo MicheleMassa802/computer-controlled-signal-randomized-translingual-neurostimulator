@@ -61,90 +61,23 @@ folder, then open <code>http://localhost:8000/gedge_serial.html</code>.
 </div>
 
 <script>
-const $ = id => document.getElementById(id);
-let port = null, writer = null, reader = null;
+  import { connect, disconnect, send, setLogger } from "./gedge_serial_core.js";
+  const $ = id => document.getElementById(id);
 
-function log(msg, cls) {
-  const span = document.createElement('span');
-  if (cls) span.className = cls;
-  span.textContent = msg + '\n';
-  $('log').appendChild(span);
-  $('log').scrollTop = $('log').scrollHeight;
-}
+  // Override logger so logs appear in the UI when used as standalone project
+  setLogger((msg, cls) => {
+    const span = document.createElement('span');
+    if (cls) span.className = cls;
+    span.textContent = msg + '\n';
+    $('log').appendChild(span);
+    $('log').scrollTop = $('log').scrollHeight;
+  });
 
-if (!('serial' in navigator)) {
-  $('status').textContent = 'Web Serial API not supported in this browser.';
-  $('status').className = 'err';
-  $('connect').disabled = true;
-}
-
-async function connect() {
-  try {
-    port = await navigator.serial.requestPort();
-    await port.open({ baudRate: 115200 });
-    writer = port.writable.getWriter();
-    const info = port.getInfo();
-    const v = info.usbVendorId,  p = info.usbProductId;
-    const vh = v != null ? v.toString(16).padStart(4, '0') : '?';
-    const ph = p != null ? p.toString(16).padStart(4, '0') : '?';
-    $('status').textContent = `Open @ 115200 baud (USB ${vh}:${ph})`;
-    log('Connected at 115200 baud.', 'ok');
-    $('connect').disabled = true;
-    $('disconnect').disabled = false;
-    $('send').disabled = false;
-    readLoop();
-  } catch (e) {
-    log('Connect failed: ' + e.message, 'err');
-  }
-}
-
-async function disconnect() {
-  try {
-    if (reader) { await reader.cancel(); reader = null; }
-    if (writer) { writer.releaseLock();  writer = null; }
-    if (port)   { await port.close();    port   = null; }
-    $('status').textContent = 'Closed.';
-    log('Disconnected.', 'ok');
-    $('connect').disabled = false;
-    $('disconnect').disabled = true;
-    $('send').disabled = true;
-  } catch (e) {
-    log('Disconnect error: ' + e.message, 'err');
-  }
-}
-
-async function send() {
-  const text = $('cmd').value;
-  if (!text || !writer) return;
-  try {
-    await writer.write(new TextEncoder().encode(text));
-    log('TX: ' + text);
-  } catch (e) {
-    log('Write failed: ' + e.message, 'err');
-  }
-}
-
-async function readLoop() {
-  const dec = new TextDecoder();
-  reader = port.readable.getReader();
-  try {
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      if (value && value.length) log('RX: ' + dec.decode(value));
-    }
-  } catch (e) {
-    log('Read error: ' + e.message, 'err');
-  } finally {
-    if (reader) { try { reader.releaseLock(); } catch (_) {} }
-  }
-}
-
-$('connect').addEventListener('click', connect);
-$('disconnect').addEventListener('click', disconnect);
-$('send').addEventListener('click', send);
-$('cmd').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
-$('clear').addEventListener('click', () => $('log').textContent = '');
+  // connect UI btns
+  $('connect').addEventListener('click', connect);
+  $('disconnect').addEventListener('click', disconnect);
+  $('send').addEventListener('click', send);
+  $('clear').addEventListener('click', () => $('log').textContent = '');
 </script>
 
 </body>
