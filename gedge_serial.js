@@ -21,8 +21,10 @@ export async function connect() {
 
         log(`[connect] Open @ 115200 baud (USB ${vh}:${ph})`, "ok");
         readLoop();
+        return true;
     } catch (e) {
         log(`[connect] Failed: ${e.message}`, "err");
+        return false;
     }
 }
 
@@ -33,8 +35,10 @@ export async function disconnect() {
         if (port)   { await port.close(); port = null; }
 
         log("[disconnect] Closed.", "ok");
+        return true;
     } catch (e) {
         log(`[disconnect] Error: ${e.message}`, "err");
+        return false;
     }
 }
 
